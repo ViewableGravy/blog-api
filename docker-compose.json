@@ -1,0 +1,11 @@
+{
+    "version": "3.3",
+    "services": {
+        "mongo": {
+            "image": "mongo",
+            "container_name": "mongodb",
+            "ports": [ "27017:27017" ],
+            "volumes": [ "/home/gravy/Documents/website/gravy.cc-backend/mongodb/database:/data/db" ]
+        }
+    }
+}
