@@ -1,16 +1,113 @@
+import { userSchema } from './schema/user'
+import { MongoClient, ObjectId } from 'mongodb';
+import { Send, Query } from 'express-serve-static-core';
 import express from 'express';
 import bodyParser from 'body-parser';
-import { userSchema } from './schema/user'
-import { MongoClient, ObjectID, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import * as postContent from './schema/post';
-import { Send, Query } from 'express-serve-static-core';
-import { randomUUID } from 'crypto';
 import crypto from "crypto";
-import { create } from 'domain';
+import * as postContent from './schema/post';
 
 
+const generateCollectionInsertquery = (collectionID: string, position: number, existing: any, body: any, filteredKeys: (string)[]): object => {
+    const insert: any = {
+        $push: { 
+            content: {
+                $each: [existing?.content.find((x: any) => (x._id as ObjectId).toString() == collectionID)],
+                $position: position
+            }
+        }
+    }
+
+    for (let key in body)
+        if ( filteredKeys.includes(key) )
+            insert.$push.content.$each[0][key] = (body)[key];
+
+    return insert;
+}
+
+const generateCollectionFindQuery = (req: { params: { collectionID: string | null | undefined, id: string }}, contentType: string) => {
+    const collectionID = req.params?.collectionID;
+    const id = req.params.id;
+
+    const query = !collectionID ? 
+        { _id: new ObjectId(id) } : 
+        { _id: new ObjectId(id), content: {
+            $elemMatch: {
+                _id: new ObjectId(collectionID),
+                type: contentType
+            } 
+        }};
+
+    return query
+}
+
+const GenerateCollectionUpsertQuery = (collectionID: string | null | null, body: {[key: string]: any}, position: number | null) => {
+    //Insert new fields into collection element if collection is not specified
+    if (!collectionID) {
+        const createBodyElement: {$push: {content: any}} = {
+            $push: { 
+                content: {
+                    $each: [{
+                        _id:  new ObjectId(crypto.randomBytes(12).toString("hex")), //length 24 (since you can fit 2 hex in a byte I think)
+                        ...body
+                    }],
+                }
+            }
+        }
+
+        if (position !== null && !isNaN(position)) 
+            createBodyElement.$push.content['$position'] = position
+
+        return createBodyElement;
+    } 
+    
+    //Update existing collection with keys if collectionID is defined
+    const updateBodyElement: {$set: any} = { $set: {} }
+
+    for (let key in body)
+        if (body[key])
+            updateBodyElement.$set[`content.$.${key}`] = body[key]
+
+    return updateBodyElement;
+}
+
+const moveContent = async (res: any, req: any, query: object, filteredKeys: (string)[]) => {
+    const collection = client.db(dbName).collection(draftCollectionName);
+    const collectionID = req.params?.collectionID;
+    const id = req.params.id;
+    const position = parseInt(req.body.position) 
+
+    //get existing content
+    const find = await collection.findOne(query)
+    if (!find) { res.status(404).send(`Content with Collection Id does not exist`); return };
+
+    //remove existing content
+    const remove = await collection.updateOne(query, {
+        $pull: {
+            content: {
+                _id: new ObjectId(collectionID)
+            }
+        }
+    });
+
+    if (remove.matchedCount == 0) { res.status(400).send(`Failed to remove element from content`); return }
+
+    const insertObject = generateCollectionInsertquery(collectionID, position, find, req.body, filteredKeys)
+    const insertResponse = await collection.updateOne({ _id: new ObjectId(id) }, insertObject);
+
+    res.status(200).send({
+        inserted: (insertObject as any).$push.content.$each,
+        position: position
+    });
+}
+
+const draftContentHelperFunctions = {
+    generateCollectionInsertquery: generateCollectionInsertquery,
+    generateCollectionFindQuery: generateCollectionFindQuery,
+    GenerateCollectionUpsertQuery: GenerateCollectionUpsertQuery,
+    moveContent: moveContent
+}
 
 interface TypedRequestBody<B> extends Express.Request {
     body: B
@@ -70,68 +167,9 @@ const authToken = (req: any, res: any, next: any) => {
     })
 }
 
-const generateCollectionInsertquery = (collectionID: string, position: number, existing: any, body: any, filteredKeys: (string)[]): object => {
-    const insert: any = {
-        $push: { 
-            content: {
-                $each: [existing?.content.find((x: any) => (x._id as ObjectId).toString() == collectionID)],
-                $position: position
-            }
-        }
-    }
 
-    for (let key in body)
-        if ( filteredKeys.includes(key) )
-            insert.$push.content.$each[0][key] = (body)[key];
 
-    return insert;
-}
 
-const generateCollectionFindQuery = (req: { params: { collectionID: string | null | undefined, id: string }}, contentType: string) => {
-    const collectionID = req.params?.collectionID;
-    const id = req.params.id;
-
-    const query = !collectionID ? 
-        { _id: new ObjectId(id) } : 
-        { _id: new ObjectId(id), content: {
-            $elemMatch: {
-                _id: new ObjectId(collectionID)//,
-                //type: contentType
-            } 
-        }};
-
-    return query
-}
-
-const GenerateCollectionUpsertQuery = (collectionID: string | null | null, body: {[key: string]: any}, position: number | null) => {
-    //Insert new fields into collection element if collection is not specified
-    if (!collectionID) {
-        const createBodyElement: {$push: {content: any}} = {
-            $push: { 
-                content: {
-                    $each: [{
-                        _id:  new ObjectId(crypto.randomBytes(12).toString("hex")), //length 24 (since you can fit 2 hex in a byte I think)
-                        ...body
-                    }],
-                }
-            }
-        }
-
-        if (position !== null && !isNaN(position)) 
-            createBodyElement.$push.content['$position'] = position
-
-        return createBodyElement;
-    } 
-    
-    //Update existing collection with keys if collectionID is defined
-    const updateBodyElement: {$set: any} = { $set: {} }
-
-    for (let key in body)
-        if (body[key])
-            updateBodyElement.$set[`content.$.${key}`] = body[key]
-
-    return updateBodyElement;
-}
 
 app.post('/api/user/login', (req: TypedRequestBody<{username: string, password: string}>, res: TypedResponse<{message: string, access_token: string} | string>) => {
     const message = `connected successfully with username: ${req.body.username} and password: ${req.body.password}`;
@@ -333,7 +371,9 @@ app.post('/blog/api/admin/post/draft/:id/body/paragraph/:collectionID?', authTok
     if (req.body.css && Array.isArray(css))           { res.status(400).send(cssIsNotAnObject); return }
     
     const collection = client.db(dbName).collection(draftCollectionName);
-    const query = generateCollectionFindQuery(req, "Paragraph");
+    const findQuery = generateCollectionFindQuery(req, "Paragraph");
+    
+    //only add css if not an empty object.
     const paragraphContent : Omit<postContent.BlogPostParagraph , "_id"> = {
         type: "Paragraph",
         text: req.body.text,
@@ -343,139 +383,77 @@ app.post('/blog/api/admin/post/draft/:id/body/paragraph/:collectionID?', authTok
     const update = GenerateCollectionUpsertQuery(collectionID, paragraphContent, position)
 
     client.connect(async () => {
-
         // updating existing content with a new position
-        if (collectionID && position !== null && position !== undefined && !isNaN(position)) {
-            
-            //get existing content
-            const find = await collection.findOne(query)
-            if (!find) { res.status(404).send(`Content with Collection Id does not exist`); return };
+        if (collectionID && position)
+            return await draftContentHelperFunctions.moveContent(res, req, findQuery, ['css', 'text']);
 
-            //remove existing content
-            const remove = await collection.updateOne(query, {
-                $pull: {
-                    content: {
-                        _id: new ObjectId(collectionID)
-                    }
-                }
-            });
+        // upsert (no rearrange) / insert with position
+        const findResponse = await collection.findOne(findQuery);
+        if (!findResponse) { res.status(404).send(`Content with CollectionID ${collectionID} does not exist`); return };
 
-            if (remove.matchedCount == 0) { res.status(400).send(`Failed to remove element from content`); return }
+        const update = draftContentHelperFunctions.GenerateCollectionUpsertQuery(collectionID, paragraphContent, position)
+        const updateResponse = await collection.updateOne(findQuery, update, { upsert: true });
 
-            const insertObject = generateCollectionInsertquery(collectionID, position as number, find, req.body, ['css', 'text'])
-            const insertResponse = await collection.updateOne({ _id: new ObjectId(id) }, insertObject);
-
-            res.status(200).send(insertResponse);
-            return;
-        }
-
-        const updateResponse = await collection.updateOne(query, update, { upsert: true });
-        if (!updateResponse.acknowledged) { res.status(500).send('An error occured with inserting into the database'); return }
+        if (!updateResponse.acknowledged) return res.status(500).send('An error occured with inserting into the database');
 
         //No collection id, one was generated in the update object
         !collectionID
-            ? res.status(200).send((update as any).$push.content._id)
-            : res.status(201).send(paragraphContent);
+            ? res.status(200).send((update as any).$push.content.$each[0]._id)
+            : res.status(200).send(paragraphContent);
     });
 });
 
-const moveContent = async (res: any, req: any, position: any, query: object, filteredKeys: any) => {
-    const collection = client.db(dbName).collection(draftCollectionName);
-    const collectionID = req.params?.collectionID;
-    const id = req.body.id;
-
-    //get existing content
-    const find = await collection.findOne(query)
-    if (!find) { res.status(404).send(`Content with Collection Id does not exist`); return };
-
-    //remove existing content
-    const remove = await collection.updateOne(query, {
-        $pull: {
-            content: {
-                _id: new ObjectId(collectionID)
-            }
-        }
-    });
-
-    if (remove.matchedCount == 0) { res.status(400).send(`Failed to remove element from content`); return }
-
-    const insertObject = generateCollectionInsertquery(collectionID, position as number, find, req.body, filteredKeys)
-    const insertResponse = await collection.updateOne({ _id: new ObjectId(id) }, insertObject);
-
-    res.status(200).send(insertResponse.upsertedId);
-    return;
-}
-
-app.post('/blog/api/admin/post/draft/:id/body/image/:collectionID?', authToken, async (req: TypedRequest<undefined, {css: string, path: string, position: string | number | undefined}, { id: string, collectionID: string | null }>,res) => {
+app.post('/blog/api/admin/post/draft/:id/body/image/:collectionID?', authToken, async (req: TypedRequest<undefined, {css: string, path: string, position: string | undefined}, { id: string, collectionID: string | null }>,res) => {
     const imagePathNotDefined = `path value was not defined. This is required when creating a new blog Element of type "image"`
     const cssIsNotAnObject    = `The CSS Object provided was not an acceptable object`
     const invalidID           = `ID must be a 24 character hex string`
     const invalidCollectionID = `Draft ID must be a 24 character hex string`
     const positionIsNotNumber = `Position must be a number`
 
+    const type = "Image";
     const id = req.params.id;
     const position = req.body.position !== null && req.body.position !== undefined 
-        ? parseInt(req.body.position as any) 
+        ? parseInt(req.body.position) 
         : null;
     const collectionID = req.params?.collectionID ?? null;
-
-    if (id.length !== 24)                                               { res.status(400).send(invalidID          ); return }
-    if (collectionID && collectionID.length !== 24)                     { res.status(400).send(invalidCollectionID); return }
-    if (!req.body.path && !req.params.collectionID)                     { res.status(400).send(imagePathNotDefined); return }
-    if (position !== null && position !== undefined && isNaN(position)) { res.status(400).send(positionIsNotNumber); return }
 
     let css: { [key: string]: any} = {};
     if (req.body.css)
         try   { css = JSON.parse(req.body.css); } 
-        catch { res.status(400).send(cssIsNotAnObject); return }
-        
-    if (req.body.css && Array.isArray(css)) { res.status(400).send(cssIsNotAnObject); return }
+        catch { return res.status(400).send(cssIsNotAnObject) }
 
-    const query = generateCollectionFindQuery(req, "Image");
+    if (id.length !== 24)                                               return res.status(400).send(invalidID          );
+    if (collectionID && collectionID.length !== 24)                     return res.status(400).send(invalidCollectionID);
+    if (!req.body.path && !req.params.collectionID)                     return res.status(400).send(imagePathNotDefined);
+    if (position !== null && position !== undefined && isNaN(position)) return res.status(400).send(positionIsNotNumber);
+    if (req.body.css && Array.isArray(css))                             return res.status(400).send(cssIsNotAnObject   );
+
+    const findQuery = draftContentHelperFunctions.generateCollectionFindQuery(req, type);
     const collection = client.db(dbName).collection(draftCollectionName);
     const imageContent: Omit<postContent.BlogPostImage, "_id"> = {
-        type: "Image",
+        type: type,
         path: req.body.path,
         css: css
     }
 
     client.connect(async () => {
         // updating existing content with a new position
-        if (collectionID && position && !isNaN(Number(position))) {
-
-            const find = await collection.findOne(query)
-            if (!find) { res.status(404).send(`Content with Collection Id does not exist`); return };
-
-            //remove existing content
-            const remove = await collection.updateOne(query, {
-                $pull: {
-                    content: {
-                        _id: new ObjectId(collectionID)
-                    }
-                }
-            });
-
-            if (remove.matchedCount == 0) { res.status(400).send(`Failed to remove element from content`); return }
-
-            const insertObject = generateCollectionInsertquery(collectionID, position as number, find, req.body, ['css', 'path'])
-            const insertResponse = await collection.updateOne({ _id: new ObjectId(id) }, insertObject);
-
-            res.status(200).send(insertResponse.upsertedId);
-            return;
-        }
+        if (collectionID && position)
+            return await draftContentHelperFunctions.moveContent(res, req, findQuery, ['css', 'path']);
         
-        // upsert (no position) / insert with position
-        const update = GenerateCollectionUpsertQuery(collectionID, imageContent, position)
+        // upsert (no rearrange) / insert with position
+        const findResponse = await collection.findOne(findQuery);
+        if (!findResponse) { res.status(404).send(`Content with CollectionID ${collectionID} does not exist`); return };
 
-        const updateResponse = await collection.updateOne(query, update, { upsert: true });
-        if (!updateResponse.acknowledged) { res.status(500).send('An error occured with inserting into the database'); return }
-        console.log(updateResponse)
+        const update = draftContentHelperFunctions.GenerateCollectionUpsertQuery(collectionID, imageContent, position)
+        const updateResponse = await collection.updateOne(findQuery, update, { upsert: true });
+
+        if (!updateResponse.acknowledged) return res.status(500).send('An error occured with inserting into the database');
 
         //No collection id, one was generated in the update object
         !collectionID
-            ? res.status(200).send((update as any).$push.content._id)
+            ? res.status(200).send((update as any).$push.content.$each[0]._id)
             : res.status(200).send(imageContent);
-        
     });
 });
 
