@@ -139,6 +139,11 @@ const draftCollectionName = `drafts`;
 const publishCollectionName = `published`;
 const client = new MongoClient(`mongodb://${server}`);
 
+const apiPath = '/api';
+const blogAPIPath = `${apiPath}/blog`;
+const blogAdminPath = `${blogAPIPath}/admin`;
+const blogAdminPostPath = `${blogAPIPath}/post`;
+
 dotenv.config({ path: __dirname+'/.env' });
 
 const app = express();
@@ -167,11 +172,10 @@ const authToken = (req: any, res: any, next: any) => {
     })
 }
 
+type reqType = TypedRequestBody<{username: string, password: string}>;
+type resType = TypedResponse<{message: string, access_token: string} | string>;
 
-
-
-
-app.post('/api/user/login', (req: TypedRequestBody<{username: string, password: string}>, res: TypedResponse<{message: string, access_token: string} | string>) => {
+app.post(`${apiPath}/login`, (req: reqType, res: resType) => {
     const message = `connected successfully with username: ${req.body.username} and password: ${req.body.password}`;
 
     if      (!req.body?.username) { res.status(400).send("Username is not defined"); return }
@@ -204,15 +208,7 @@ app.post('/api/user/login', (req: TypedRequestBody<{username: string, password: 
     })
 });
 
-//testing
-app.post('/create', authToken, async (req, res) => {
-    client.connect(() => {
-        let collection = client.db(dbName).collection("blogs");
-        res.send( collection.insertOne({ name: req.body.content }) );
-    })
-});
-
-app.post('/blog/api/admin/post/draft/', authToken, async (req: TypedRequestBody<{postID: string}>, res: TypedResponse<{draftID: string} | string>) : Promise<any> => {
+app.post(`${blogAdminPostPath}/draft/`, authToken, async (req: TypedRequestBody<{postID: string}>, res: TypedResponse<{draftID: string} | string>) : Promise<any> => {
     //const draftID = randomUUID();
     const postID = req.body?.postID ?? undefined;
 
@@ -248,7 +244,7 @@ app.post('/blog/api/admin/post/draft/', authToken, async (req: TypedRequestBody<
     });
 });
 
-app.post('/blog/api/admin/post/draft/delete', authToken, async (req: TypedRequestBody<{draftID: string}>, res: any) : Promise<any> => {
+app.post(`${blogAdminPostPath}/draft/delete`, authToken, async (req: TypedRequestBody<{draftID: string}>, res: any) : Promise<any> => {
     const id = req.body.draftID;
     
     if (id.length !== 24) { res.status(400).send(`Draft ID must be a 24 character hex string`); return; }
@@ -264,7 +260,7 @@ app.post('/blog/api/admin/post/draft/delete', authToken, async (req: TypedReques
     });
 });
 
-app.post('/blog/api/admin/post/delete', authToken, async (req: TypedRequestBody<{postID: string}>, res: any) : Promise<any> => {
+app.post(`${blogAdminPostPath}/delete`, authToken, async (req: TypedRequestBody<{postID: string}>, res: any) : Promise<any> => {
     const id = req.body.postID;
     
     if (id.length !== 24) { res.status(400).send(`Post ID must be a 24 character hex string`); return; }
@@ -280,7 +276,7 @@ app.post('/blog/api/admin/post/delete', authToken, async (req: TypedRequestBody<
     });
 });
 
-app.post('/blog/api/admin/post/draft/:id/meta', authToken, async (req: TypedRequest<undefined, postContent.BlogPostMeta, {id: string}>, res: any) => {
+app.post(`${blogAdminPostPath}/draft/:id/meta`, authToken, async (req: TypedRequest<undefined, postContent.BlogPostMeta, {id: string}>, res: any) => {
     const id = req.params.id;
     const updateData: any = {};
 
@@ -305,7 +301,7 @@ app.post('/blog/api/admin/post/draft/:id/meta', authToken, async (req: TypedRequ
     });
 });
 
-app.post('/blog/api/admin/post/draft/:id/body/delete', authToken, async (req: TypedRequest<undefined, {collectionID: string | null}, {id: string}>, res) => {
+app.post(`${blogAdminPostPath}/draft/:id/body/delete`, authToken, async (req: TypedRequest<undefined, {collectionID: string | null}, {id: string}>, res) => {
     const invalidDraftID = `Draft ID must be a 24 character hex string`;
     const invalidCollectionID = `Draft ID must be a 24 character hex string`;
     
@@ -341,12 +337,11 @@ app.post('/blog/api/admin/post/draft/:id/body/delete', authToken, async (req: Ty
 });
 
 //Allow a body element to be re-ordered (e.g. place an image at the top rather than bottom)
-app.post('/blog/api/admin/post/draft/:id/body/re-order', authToken, async (req, res) => {
+app.post(`${blogAdminPostPath}/draft/:id/body/re-order`, authToken, async (req, res) => {
 
 });
 
-// Allow for specification of where this should be entered (e.g. position 3 in the database array), default to end of array
-app.post('/blog/api/admin/post/draft/:id/body/paragraph/:collectionID?', authToken, async (req: TypedRequest<undefined, {css: string, text: string, position: string | number | undefined}, {id: string, collectionID: string | null} >, res) => {  
+app.post(`${blogAdminPostPath}/draft/:id/body/paragraph/:collectionID?`, authToken, async (req: TypedRequest<undefined, {css: string, text: string, position: string | number | undefined}, {id: string, collectionID: string | null} >, res) => {  
     const bodyTextUndefined = `Text Value was not defined. This is required when creating a new blog Element of type Paragraph`;
     const cssIsNotAnObject = `The CSS Object provided was not an acceptable object`
     const invalidDraftID = `Draft ID must be a 24 character hex string`
@@ -403,7 +398,7 @@ app.post('/blog/api/admin/post/draft/:id/body/paragraph/:collectionID?', authTok
     });
 });
 
-app.post('/blog/api/admin/post/draft/:id/body/image/:collectionID?', authToken, async (req: TypedRequest<undefined, {css: string, path: string, position: string | undefined}, { id: string, collectionID: string | null }>,res) => {
+app.post(`${blogAdminPostPath}/draft/:id/body/image/:collectionID?`, authToken, async (req: TypedRequest<undefined, {css: string, path: string, position: string | undefined}, { id: string, collectionID: string | null }>,res) => {
     const imagePathNotDefined = `path value was not defined. This is required when creating a new blog Element of type "image"`
     const cssIsNotAnObject    = `The CSS Object provided was not an acceptable object`
     const invalidID           = `ID must be a 24 character hex string`
@@ -457,11 +452,11 @@ app.post('/blog/api/admin/post/draft/:id/body/image/:collectionID?', authToken, 
     });
 });
 
-app.post('/blog/api/admin/post/draft/:id/body/Code', authToken, async (req,res) => {
+app.post(`${blogAdminPostPath}/draft/:id/body/Code`, authToken, async (req,res) => {
     //TODO
 });
 
-app.post('/blog/api/admin/post/draft/publish', authToken, async (req: TypedRequestBody<{draftID: string | undefined}>, res) => {
+app.post(`${blogAdminPostPath}/draft/publish`, authToken, async (req: TypedRequestBody<{draftID: string | undefined}>, res) => {
     const draftID = req.body?.draftID;
 
     if (!draftID)              { res.status(400).send(`Must provide a draftID`); return }
@@ -501,7 +496,7 @@ app.post('/blog/api/admin/post/draft/publish', authToken, async (req: TypedReque
     });
 });
 
-app.get('/blog/api/admin/post/draft/:id', authToken, async (req: TypedRequestParams<{id: string}>, res: TypedResponse<postContent.BlogPostDraft | string >) : Promise<any> => {
+app.get(`${blogAdminPostPath}/draft/:id`, authToken, async (req: TypedRequestParams<{id: string}>, res: TypedResponse<postContent.BlogPostDraft | string >) : Promise<any> => {
     const id = req.params.id;
     
     if (id.length !== 24) { res.status(400).send(`Draft ID must be a 24 character hex string`); return; }
@@ -517,7 +512,7 @@ app.get('/blog/api/admin/post/draft/:id', authToken, async (req: TypedRequestPar
     });
 });
 
-app.get('/blog/api/admin/post/drafts', authToken, async (req,res) => {
+app.get(`${blogAdminPostPath}/drafts`, authToken, async (req,res) => {
     client.connect(async () => {
         const collection = client.db(dbName).collection(draftCollectionName);
         const result = await collection.find().toArray();
@@ -526,18 +521,12 @@ app.get('/blog/api/admin/post/drafts', authToken, async (req,res) => {
 });
 
 //testing
-app.get('/blog/api/posts', async (req, res) => {
+app.get(`${blogAPIPath}/posts`, async (req, res) => {
     client.connect(async () => {
         const collection = client.db(dbName).collection(publishCollectionName);
         const result = await collection.find().toArray();
         res.send( result );
     })
 });
- 
-//TODO
-
-// upserts should ensure they only upsert if the "type" field matches
-
-
 
 app.listen(3000, () => console.log('blog server running on port 3000!')); 
