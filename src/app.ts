@@ -142,7 +142,7 @@ const client = new MongoClient(`mongodb://${server}`);
 const apiPath = '/api';
 const blogAPIPath = `${apiPath}/blog`;
 const blogAdminPath = `${blogAPIPath}/admin`;
-const blogAdminPostPath = `${blogAPIPath}/post`;
+const blogAdminPostPath = `${blogAdminPath}/post`;
 
 dotenv.config({ path: __dirname+'/.env' });
 

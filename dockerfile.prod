@@ -1,0 +1,23 @@
+#Install Node (Probably not required at this point) to build and run application
+FROM node:16
+WORKDIR /usr/src/app
+
+#Move package.json, install npm and build
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY src           ./src
+RUN ls -a
+RUN npm install
+RUN npm run build
+
+#Install for Prod
+FROM node:16
+WORKDIR /usr/src/app
+COPY package.json ./
+COPY src/.env ./
+RUN npm install --only=production
+COPY --from=0 /usr/src/app/build .
+
+#Run application
+CMD node app.js
+EXPOSE 3000

@@ -1,0 +1,14 @@
+
+#Install Node (Probably not required at this point) to build and run application
+FROM node:16 as node
+WORKDIR /usr/src/app
+
+#Move package.json and install npm packages
+COPY package*.json ./
+COPY . .
+RUN npm install
+
+#Build Package
+RUN npm run dev
+
+EXPOSE 3000
