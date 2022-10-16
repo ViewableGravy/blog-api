@@ -21,4 +21,5 @@ export interface Request<Q = undefined, B = undefined, P = undefined> extends Ex
 export interface Response<ResBody> extends Express.Response {
     send: Send<ResBody, this>
     status(code: number): this;
+    locals: any;
 }
