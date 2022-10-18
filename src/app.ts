@@ -105,4 +105,13 @@ app.get(`${blogAPIPath}/posts`, async (req, res) => {
     })
 });
 
+//ToDo sanitize input
+app.get(`${blogAPIPath}/posts/:slug`, async (req, res) => {
+    client.connect(async () => {
+        const collection = client.db(dbName).collection(publishCollectionName);
+        const result = await collection.find({slug: req.params.slug}).toArray();
+        res.send( result );
+    })
+})
+
 app.listen(3000, () => console.log('blog server running on port 3000!')); 
