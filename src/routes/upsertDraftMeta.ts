@@ -20,6 +20,8 @@ export const upsertDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc => 
         if (req.body?.title) updateData["title"] = req.body?.title;
         if (req.body?.summary) updateData["summary"] = req.body?.summary;
         if (req.body?.date) updateData["date"] = req.body?.date;
+        if (req.body?.slug) updateData["slug"] = req.body?.slug;
+        if (req.body?.tags) updateData["tags"] = req.body?.tags;
         if (Object.keys(updateData).length == 0) return res.status(400).send("Bad Request: Must include body");
     
         mongoClient.connect(async () => {
@@ -44,7 +46,9 @@ export const upsertDraftValidator = (req: loginReqType, res: loginResType, next:
     if ( !("author" in req.body) 
       && !("title" in req.body) 
       && !("summary" in req.body) 
-      && !("date" in req.body) ) return res.status(400).send("Bad Request: Must include body"); 
+      && !("date" in req.body)
+      && !("slug" in req.body) 
+      && !("tags" in req.body) ) return res.status(400).send("Bad Request: Must include body"); 
 
     return next();
 }

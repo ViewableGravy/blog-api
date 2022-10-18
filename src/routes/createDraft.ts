@@ -34,6 +34,8 @@ export const createDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc => 
                 summary: publishedPost?.summary ?? undefined,
                 author: publishedPost?.author ?? undefined,
                 date: publishedPost?.date ?? undefined,
+                slug: publishedPost?.slug ?? undefined,
+                tags: publishedPost?.tags ?? undefined,
                 postID: postID
             }
 

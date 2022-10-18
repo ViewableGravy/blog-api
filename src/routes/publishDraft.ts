@@ -22,19 +22,23 @@ export const publishDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc =>
             const query = { _id: new ObjectId(draftID) };
             const draft = await draftCollection.findOne(query) as unknown as postContent.BlogPostDraft;
                 
-            if (!draft)                     { res.status(404).send(`Could not find draft with ID: ${draftID}`); return }
-            if (!draft?.title)              { res.status(400).send(`Title on draft was not defined`          ); return }
-            if (!draft?.summary)            { res.status(400).send(`summary on draft was not defined`        ); return }
-            if (!draft?.author)             { res.status(400).send(`author on draft was not defined`         ); return }
-            if (!draft?.date)               { res.status(400).send(`date on draft was not defined`           ); return }
-            if (draft.content.length === 0) { res.status(400).send(`No content was specified for draft`      ); return }
+            if (!draft)                     return res.status(404).send(`Could not find draft with ID: ${draftID}`);
+            if (!draft?.title)              return res.status(400).send(`Title on draft was not defined`          );
+            if (!draft?.summary)            return res.status(400).send(`summary on draft was not defined`        );
+            if (!draft?.author)             return res.status(400).send(`author on draft was not defined`         );
+            if (!draft?.date)               return res.status(400).send(`date on draft was not defined`           );
+            if (!draft?.slug)               return res.status(400).send(`slug on draft was not defined`           );
+            if (!draft?.tags)               return res.status(400).send(`No Tags on draft were defined`           );
+            if (draft.content.length === 0) return res.status(400).send(`No content was specified for draft`      );
     
             const post : Omit<postContent.BlogPostProduction, "_id"> = {
                 content: draft.content,
                 title: draft.title,
                 summary: draft.summary,
                 author: draft.author,
-                date: draft.date
+                date: draft.date,
+                slug: draft.slug,
+                tags: draft.tags
             }
     
             const creationResponse = draft?.postID 

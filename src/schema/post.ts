@@ -31,6 +31,8 @@ export interface BlogPostMeta {
     summary?: string
     author?: userSchema["username"]
     date?: string
+    slug?: string
+    tags: string[]
 }
 
 export interface BlogPostDraft extends BlogPost, BlogPostMeta {
@@ -43,6 +45,8 @@ export interface BlogPostProduction extends BlogPost, BlogPostMeta {
     summary: string
     author: userSchema["username"]
     date: string
+    slug: string
+    tags: string[]
     _id: string 
 }
 
