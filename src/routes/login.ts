@@ -26,7 +26,7 @@ export const loginRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
       const collection = mongoClient.db(authDB).collection(authDB);
       const dbUser = await collection.findOne({ email: getUser.email }) as userSchema;
 
-      if (!dbUser) return res.status(404).send(`email ${getUser.email} not found`);
+      if (!dbUser) return res.status(401).send(`email ${getUser.email} not found`);
       if (dbUser.password != getUser.password) return res.status(401).send(`Authentication Failed`);
       
       res.status(200).send({
@@ -39,7 +39,7 @@ export const loginRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
 
 //probably do some sanitisation here
 export const loginRouteValidator = (req: loginReqType, res: loginResType, next: () => any): Express.Response | NextFunction => {
-  if (!req.body?.email) return res.status(400).send("Username is not defined")
+  if (!req.body?.email) return res.status(400).send("email is not defined")
   if (!req.body?.password) return res.status(400).send("Password is not defined")
   return next();
 }
