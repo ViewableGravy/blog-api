@@ -11,7 +11,7 @@ export const authToken = (req: any, res: any, next: any) => {
     const token = authHeader && authHeader.split(' ')[1];
   
     if (token == null) 
-      return res.sendStatus(401);
+      return res.sendStatus(401); //bad request
   
     jwt.verify(token, process.env.TOKEN_SECRET as string, (err: any, data: any) => {
       if (err) 
