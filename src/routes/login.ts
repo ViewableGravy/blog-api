@@ -26,7 +26,7 @@ export const loginRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
       const collection = mongoClient.db(authDB).collection(authDB);
       const dbUser = await collection.findOne({ email: getUser.email }) as userSchema;
 
-      if (!dbUser) return res.status(401).send(`email ${getUser.email} not found`);
+      if (!dbUser) return res.status(401).send(`User not found`);
       if (dbUser.password != getUser.password) return res.status(401).send(`Authentication Failed`);
       
       res.status(200).send({
