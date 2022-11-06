@@ -21,8 +21,7 @@ export const refreshTokenRoute = (mongoClient: MongoClient): ExpressRouteFunc =>
       const dbUser = await collection.findOne({ username: username }) as userSchema;
 
       if (!dbUser) return res.status(404).send(`user not found`);
-      
-      res.status(200).send({
+      return res.status(200).send({
         username: dbUser.username,
         access_token: generateAccessToken({username: dbUser.username})
       });

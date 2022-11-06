@@ -9,7 +9,7 @@ export const generateAccessToken = (username: {username: string}) => {
 export const authToken = (req: any, res: any, next: any) => {
     const authHeader = req.headers?.authorization;
     const token = authHeader && authHeader.split(' ')[1];
-  
+
     if (token == null) 
       return res.sendStatus(401); //bad request
   
@@ -18,6 +18,6 @@ export const authToken = (req: any, res: any, next: any) => {
         return res.sendStatus(403);
       
       req.decryptJWT = data
-      next()
+      return next()
     });
 }
