@@ -116,7 +116,7 @@ blog.get(`${blogAPIPath}/posts/:slug`, async (req, res) => {
             return res.sendStatus(404);
         }
 
-        return res.send( result );
+        return res.send( result[0] );
     })
 })
 

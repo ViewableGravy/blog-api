@@ -16,6 +16,8 @@ type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFuncti
 
 export const loginRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
   return async (req: loginReqType, res: loginResType) => {
+    //sanitize inputs here
+
     type LoginCredentials = Omit<userSchema, 'username' | '_id'>;
     const getUser: LoginCredentials = {
       email: req.body?.email,
