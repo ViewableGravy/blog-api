@@ -3,44 +3,47 @@ import { loginRoute, loginRouteValidator } from './routes/login';
 import { createDraftRoute, createDraftValidator } from './routes/createDraft';
 import { deleteDraftRoute, deleteDraftValidator } from './routes/deleteDraft';
 import { deletePostRoute, deletePostValidator } from './routes/deletePost';
-import { authToken } from './middleware/authentication'
-import express from 'express';
-import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
-import * as postContent from './schema/post';
-import * as TypedRequest from './schema/TypedRequests';
+import { authToken, captchaMiddleware } from './middleware/authentication'
 import { upsertDraftRoute, upsertDraftValidator } from './routes/upsertDraftMeta';
 import { deleteContentRoute, deleteContentValidator } from './routes/paragraph/delete';
 import { publishDraftRoute, publishDraftValidator } from './routes/publishDraft';
 import { insertParagraphRoute, insertParagraphValidator } from './routes/paragraph/insert';
 import { putParagraphRoute, putParagraphValidator } from './routes/paragraph/override';
 import { patchParagraphRoute, patchParagraphValidator } from './routes/paragraph/patch';
-import session from "express-session";
-import cors from 'cors';
-import axios from 'axios';
 import { refreshTokenRoute } from './routes/refreshToken';
+import * as postContent from './schema/post';
+import * as TypedRequest from './schema/TypedRequests';
+import express from 'express';
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { CommentRoute, CommentRouteValidator } from './routes/contact';
 
 const server = `localhost:27017`;
 const dbName = `blog`;
-//const authDB = `auth`;
 const draftCollectionName = `drafts`;
 const publishCollectionName = `published`;
 const client = new MongoClient(`mongodb://${server}`);
 
 const apiPath = '/api';
-const blogAPIPath = `${apiPath}/blog`;
-const blogAdminPath = `${blogAPIPath}/admin`;
-const blogAdminPostPath = `${blogAdminPath}/post`;
+const blogAPIPath = '/api/blog';
+const blogAdminPostPath = '/api/blog/admin/post';
 
 dotenv.config({ path: __dirname+'/.env' });
 
 const blog = express();
+
 blog.use(bodyParser.json());
 blog.use(bodyParser.urlencoded({ extended: false }));
 blog.use(cors())
+blog.use(express.json());
+
+//////////////////////// Auth //////////////////////////
 
 blog.post(`${apiPath}/login`, loginRouteValidator, loginRoute(client));
 blog.post(`${apiPath}/refreshToken`, authToken, refreshTokenRoute(client));
+
+//////////////////////// BLOG //////////////////////////
 
 blog.post(`${blogAdminPostPath}/draft/`, authToken, createDraftValidator, createDraftRoute(client));
 blog.post(`${blogAdminPostPath}/draft/publish`, authToken, publishDraftValidator, publishDraftRoute(client));
@@ -51,7 +54,6 @@ blog.delete(`${blogAdminPostPath}/draft/:id/body/delete/:collectionID`, authToke
 
 blog.put(`${blogAdminPostPath}/draft/:id/meta`, authToken, upsertDraftValidator, upsertDraftRoute(client));
 //app.put(`${blogAdminPostPath}/draft/:id/body/paragraph/:collectionID?`, authToken, upsertParagraphValidator, upsertParagraphRoute(client));
-
 
 // app.post(`${blogAdminPostPath}/draft/:id/meta`, authToken, insertDraftValidator, insertDraftRoute(client));
 // app.patch(`${blogAdminPostPath}/draft/:id/meta`, authToken, updateDraftValidator, updateDraftRoute(client));
@@ -70,9 +72,6 @@ blog.patch(`${blogAdminPostPath}/draft/:id/body/paragraph/:collectionID`, authTo
 // app.patch(`${blogAdminPostPath}/draft/:id/body/code/:collectionID?`, authToken, overrideCodeValidator, overrideCodeRoute(client));
 
 // app.patch(`${blogAdminPostPath}/draft/:id/body/move/:collectionID?`, authToken, moveContentValidator, moveContenthRoute(client));
-
-
-
 
 blog.get(`${blogAdminPostPath}/draft/:id`, authToken, async (req: TypedRequest.RequestParams<{id: string}>, res: TypedRequest.Response<postContent.BlogPostDraft | string >) : Promise<any> => {
     const id = req.params.id;
@@ -112,15 +111,23 @@ blog.get(`${blogAPIPath}/posts/:slug`, async (req, res) => {
         const collection = client.db(dbName).collection(publishCollectionName);
         const result = await collection.find({slug: req.params.slug}).toArray();
 
-        if (result.length === 0) {
+        if (result.length === 0) 
             return res.sendStatus(404);
-        }
 
         return res.send( result[0] );
     })
 })
 
-const expressServer = blog.listen(3000, () => console.log('Server running on port 3000!')); 
+
+////////////////////////// CAPTCHA ////////////////////////////
+
+//TODO, install express-santizer and sanitize input
+blog.post(`/api/contact`, captchaMiddleware, CommentRouteValidator, CommentRoute)
+
+////////////////////////// SERVER ////////////////////////////
+
+const port = process.env.PORT || 3000;
+const expressServer = blog.listen(port, () => console.log(`Server running on port ${port}!`)); 
 
 /////////// WEB SOCKETS!!! ////////////////
 // const client_id = dotenv

@@ -10,6 +10,7 @@ type loginReqType = TypedRequest.Request<undefined, postContent.BlogPostMeta, {i
 type loginResType = TypedRequest.Response<string>;
 type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFunction) => void | Promise<void>;
 
+//verify that tags are arrays of strings
 export const upsertDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
     return async (req: loginReqType, res: loginResType): Promise<any> => {
         const id = req.params.id;

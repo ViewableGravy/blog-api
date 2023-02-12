@@ -1,3 +1,4 @@
+import axios from 'axios';
 import jwt from 'jsonwebtoken';
 
 export const generateAccessToken = (username: {username: string}) => {
@@ -20,4 +21,25 @@ export const authToken = (req: any, res: any, next: any) => {
       req.decryptJWT = data
       return next()
     });
+}
+
+export const captchaMiddleware = async (req: any, res: any, next: any) => {
+  const { captchaToken } = req.body;
+  if (!captchaToken) return res.status(400).send('Captcha token is required');
+
+  const secret = process.env.SECRET_KEY;
+  const verificationURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captchaToken}`;
+
+  try {
+      const response = await axios.post(verificationURL, {
+          headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" }
+      });
+
+      if (!response.data.success) return res.json({ success: false });
+      
+      return next();
+  } catch {
+      return res.json({ success: false });
+  }
+
 }

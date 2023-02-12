@@ -4,7 +4,7 @@
   "description": "backend for gravy.cc",
   "main": "./src/app.js",
   "scripts": {
-    "dev": "npx nodemon ./src/app.ts",
+    "dev": "nodemon ./src/app.ts",
     "build": "tsc --project ./ --outDir ./build"
   },
   "author": "Lleyton Morris",
@@ -16,9 +16,12 @@
     "dotenv": "^16.0.2",
     "express": "^4.18.1",
     "express-session": "^1.17.3",
+    "express-validator": "^6.14.3",
     "jsonwebtoken": "^8.5.1",
     "mongodb": "^4.9.1",
     "mongoose": "^6.6.0",
+    "nodemailer": "^6.9.1",
+    "sanitize": "^2.1.2",
     "socket.io": "^4.5.3",
     "socketio": "^1.0.0",
     "spotify-connect-ws": "^0.1.1"
@@ -30,6 +33,7 @@
     "@types/express-session": "^1.17.5",
     "@types/jsonwebtoken": "^8.5.9",
     "@types/node": "^18.7.16",
+    "@types/nodemailer": "^6.4.7",
     "@types/socket.io": "^3.0.2",
     "eslint": "^8.23.1",
     "nodemon": "^2.0.19",

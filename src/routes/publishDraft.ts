@@ -29,6 +29,8 @@ export const publishDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc =>
             if (!draft?.date)               return res.status(400).send(`date on draft was not defined`           );
             if (!draft?.slug)               return res.status(400).send(`slug on draft was not defined`           );
             if (!draft?.tags)               return res.status(400).send(`No Tags on draft were defined`           );
+            if (!Array.isArray(draft.tags)) return res.status(400).send(`Tags on draft was not an array`          );
+            if (draft.tags.length === 0)    return res.status(400).send(`No tags were specified for draft`        );
             if (draft.content.length === 0) return res.status(400).send(`No content was specified for draft`      );
     
             const post : Omit<postContent.BlogPostProduction, "_id"> = {
