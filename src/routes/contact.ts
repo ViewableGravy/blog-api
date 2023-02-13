@@ -20,6 +20,8 @@ export const CommentRoute = async (req: CommentReqType, res: CommentResType): Pr
   const emailPassword = process.env.EMAIL_PASS || '';
   const emailEncryption = process.env.EMAIL_ENCRYPTION || '';
 
+  console.log(`${emailHost}\n${emailPort}\n${emailUser}\n${emailPassword}\n${emailEncryption}`)
+
   if (!emailHost || !emailPort || !emailUser || !emailPassword || !emailEncryption) {
       return res.status(500).send('Email server not configured');
   }
