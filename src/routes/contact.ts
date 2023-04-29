@@ -7,12 +7,12 @@ const authDB = `auth`;
 
 //support logging in using a username rather than an email
 
-type CommentReqType = TypedRequest.RequestBody<{name: string, email: string, message: string}>;
+type CommentReqType = TypedRequest.RequestBody<{name: string, email: string, message: string, interests: string[], technical: number}>;
 type CommentResType = TypedRequest.Response<{}>;
 type ExpressRouteFunc = (req: CommentReqType, res: CommentResType, next?: NextFunction) => void | Promise<void>;
 
 export const CommentRoute = async (req: CommentReqType, res: CommentResType): Promise<Express.Response> => {
-  const { name, email, message } = req.body;
+  const { name, email, message, interests } = req.body;
 
   const emailHost = process.env.EMAIL_HOST || '';
   const emailPort = process.env.EMAIL_PORT || '';
@@ -23,11 +23,19 @@ export const CommentRoute = async (req: CommentReqType, res: CommentResType): Pr
       return res.status(500).send('Email server not configured');
   }
 
+  const emailBody = String.raw`
+        <p>From: ${name} [${email}]</p>
+        <p>Interests: ${interests.reduce((prev, curr) => prev + ', ' + curr, '')}</p>
+        <p>Technical Level (0-100): ${req.body.technical}</p>
+        <p>${message}</p>
+    `;
+
   const emailDetails = {
       from: 'contact@gravy.cc',
       to: 'lleyton92@gmail.com',
       subject: `Contact Form Submission from ${name}`,
-      text: `From: ${name} <${email}> \n\n ${message}`
+      text: emailBody,
+      html: emailBody
   };
 
   const transport = nodemailer.createTransport({
@@ -35,8 +43,8 @@ export const CommentRoute = async (req: CommentReqType, res: CommentResType): Pr
       port: emailPort,
       secure: true,
       auth: {
-          user: emailUser,
-          pass: emailPassword
+        user: emailUser,
+        pass: emailPassword
       }
   });
 
