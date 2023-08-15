@@ -227,7 +227,8 @@ const expressServer = blog.listen(port, () => console.log(`Server running on por
 //     });
 // });
 
-const KUMA_KEY = dotenv.config({ path: __dirname+'/.env' }).parsed?.KUMA_KEY;
+// const KUMA_KEY = dotenv.config({ path: __dirname+'/.env' }).parsed?.KUMA_KEY;
+const KUMA_KEY = process.env.KUMA_KEY;
 
 const API = {
     status: {
