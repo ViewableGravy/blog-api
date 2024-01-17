@@ -69,10 +69,15 @@ export const ROUTE_VALIDATORS = {
         const { data } = message;
 
         if (typeof data !== 'object') return null;
-        if (!('x' in data) || typeof data.x !== 'number') return null;
-        if (!('y' in data) || typeof data.y !== 'number') return null;
-        if (!('route' in data) || typeof data.route !== 'string') return null;
-        if (!('username' in data) || typeof data.username !== 'string') return null;
+        if (!('x' in data)) return null
+        if (!('y' in data)) return null
+        if (!('route' in data)) return null
+        if (!('username' in data)) return null
+
+        if (typeof data.x !== 'number') return null
+        if (typeof data.y !== 'number') return null
+        if (typeof data.route !== 'string') return null
+        if (typeof data.username !== 'string') return null
 
         return {
             ...message,
