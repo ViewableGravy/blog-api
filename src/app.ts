@@ -87,44 +87,40 @@ blog.get(`${blogAdminPostPath}/draft/:id`, authToken, async (req: TypedRequest.R
     
     if (id.length !== 24) { res.status(400).send(`Draft ID must be a 24 character hex string`); return; }
     
-    client.connect(async () => {
-        const collection = client.db(dbName).collection(draftCollectionName);
-        const query = { _id: new ObjectId(req.params.id) }
-        const draft = await collection.findOne(query) as unknown as postContent.BlogPostDraft;
+    const connection = await client.connect();
+    const collection = connection.db(dbName).collection(draftCollectionName);
+    const query = { _id: new ObjectId(id) }
+    const draft = await collection.findOne(query) as unknown as postContent.BlogPostDraft;
 
-        if (!draft) { res.status(404).send('Could not find draft matching the provided ID'); return };
+    if (!draft) { res.status(404).send('Could not find draft matching the provided ID'); return };
 
-        res.send(draft);
-    });
+    res.send(draft);
 });
 
 blog.get(`${blogAdminPostPath}/drafts`, authToken, async (req,res) => {
-    client.connect(async () => {
-        const collection = client.db(dbName).collection(draftCollectionName);
-        const result = await collection.find().toArray();
-        res.send( result );
-    })
+    const connection = await client.connect();
+    const collection = connection.db(dbName).collection(draftCollectionName);
+    const result = await collection.find().toArray();
+    res.send( result );
 });
 
 blog.get(`${blogAPIPath}/posts`, async (req, res) => {
-    client.connect(async () => {
-        const collection = client.db(dbName).collection(publishCollectionName);
-        const result = await collection.find().toArray();
-        res.send( result );
-    })
+    const connection = await client.connect();
+    const collection = connection.db(dbName).collection(publishCollectionName);
+    const result = await collection.find().toArray();
+    res.send( result );
 });
 
 //ToDo sanitize input
 blog.get(`${blogAPIPath}/posts/:slug`, async (req, res) => {
-    client.connect(async () => {
-        const collection = client.db(dbName).collection(publishCollectionName);
-        const result = await collection.find({slug: req.params.slug}).toArray();
+    const connection = await client.connect();
+    const collection = connection.db(dbName).collection(publishCollectionName);
+    const result = await collection.find({slug: req.params.slug}).toArray();
 
-        if (result.length === 0) 
-            return res.sendStatus(404);
+    if (result.length === 0) 
+        return res.sendStatus(404);
 
-        return res.send( result[0] );
-    })
+    return res.send( result[0] );
 })
 
 
