@@ -19,8 +19,11 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { CommentRoute, CommentRouteValidator } from './routes/contact';
 import axios from 'axios';
+import { parse } from 'url';
+import { generalSocketServer } from './sockets';
+import { wsServerStatus } from './sockets/status';
 
-const server = `localhost:27017`;
+const server = `192.168.20.20:27017`;
 const dbName = `blog`;
 const draftCollectionName = `drafts`;
 const publishCollectionName = `published`;
@@ -38,6 +41,11 @@ blog.use(bodyParser.json());
 blog.use(bodyParser.urlencoded({ extended: false }));
 blog.use(cors())
 blog.use(express.json());
+
+////////////////////////// Base ////////////////////////////
+blog.get(`${apiPath}/`, (req, res) => {
+    res.send('Hello World!');
+});
 
 //////////////////////// Auth //////////////////////////
 
@@ -128,218 +136,24 @@ blog.post(`/api/contact`, captchaMiddleware, CommentRouteValidator, CommentRoute
 ////////////////////////// SERVER ////////////////////////////
 
 const port = process.env.PORT || 3000;
-const expressServer = blog.listen(port, () => console.log(`Server running on port ${port}!`)); 
+export const expressServer = blog.listen(port, () => console.log(`Server running on port ${port}!`)); 
 
-/////////// WEB SOCKETS!!! ////////////////
+expressServer.on('upgrade', (req, socket, head) => {
+    const { pathname } = parse(req?.url ?? '');
 
+    console.log('pathname: ', pathname)
 
-// const client_id = dotenv
-// const client_secret = dotenv
-// const redirect_uri = 'https://gravy.cc/'; // Your redirect uri
-
-// let accessToken = dotenv
-// const refreshToken = dotenv
-// const exchangeCodeForAccessAndRefreshToken = async (code: string): Promise<any> => {
-//     const params = new URLSearchParams();
-
-//     params.append('client_id', client_id)
-//     params.append('client_secret', client_secret)
-//     params.append('grant_type', 'authorization_code');
-//     params.append('code', code);
-//     params.append('redirect_uri', redirect_uri)
-    
-//     const response = await axios({
-//       url: 'https://accounts.spotify.com/api/token',
-//       method: 'post',
-//       params
-//     });
-
-//     const accessToken = response.data.access_token;
-//     const refreshToken = response.data.refresh_token;
-
-//     return {
-//       accessToken: accessToken,
-//       refreshToken: refreshToken
-//     }
-// }
-
-// const WebSocket = require("ws");
-// const wsServer = new WebSocket.Server({
-//     noServer: true
-// })  
-
-// const getSpotify = async () => {
-//     let response: any = null;
-
-//     let headers = {
-//         Authorization: `Bearer ${accessToken}`
-//     }
-
-//     try {
-//         response = await axios.get("https://api.spotify.com/v1/me/player/currently-playing", {headers})
-//     } catch (err: any) {
-//         // console.log(err)
-//         //If access-token is wrong then get a new one using the refresh token.
-//         if (err.response && err.response.status === 401) {
-//             const form = {
-//                 grant_type: 'refresh_token',
-//                 refresh_token: refreshToken,
-//             }
-//             const querystring = require('node:querystring');
-
-//             const authOptions = {
-//                 headers: { 
-//                     'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')),
-//                     "content-Type": "application/x-www-form-urlencoded"
-//                 }
-//             }
-
-//             const res = await axios.post(`https://accounts.spotify.com/api/token`, form, authOptions)
-            
-//             if (res.status === 200) {
-//                 accessToken = res.data.access_token;
-//                 headers = {
-//                     Authorization: `Bearer ${accessToken}`
-//                 }
-//                 response = await axios.get("https://api.spotify.com/v1/me/player/currently-playing", {headers})
-//             }
-//         }
-//     }
-
-//     wsServer.clients.forEach((client:any) => {
-//         client.send(JSON.stringify(response.data));
-//     })
-// }
-
-// setInterval(async () => {
-//     getSpotify();
-// }, 5000)
-
-// wsServer.on("connection", function(ws: any) {    // what should a websocket do on connection
-//     console.log("Someone has loaded my website");
-//     getSpotify();
-//     ws.on("message", function(msg: any) {        // what to do on message event
-//         wsServer.clients.forEach(function each(client: any) {
-//             if (client.readyState === WebSocket.OPEN) {     // check if client is ready
-//               client.send(msg.toString());
-//             }
-//         });
-//     });
-// });
-
-// const KUMA_KEY = dotenv.config({ path: __dirname+'/.env' }).parsed?.KUMA_KEY;
-const KUMA_KEY = process.env.KUMA_KEY;
-
-const API = {
-    status: {
-        active: async () => {
-            const authOptions = {
-                headers: { 
-                    'Authorization': 'Basic ' + (Buffer.from(`key:${KUMA_KEY}`).toString('base64'))
-                }
-            }
-
-            //do some translation here before returning
-            const { data } = await axios.get('https://kuma.gravy.cc/metrics', authOptions).catch((err) => {
-                console.log(err)
-                return {
-                    data: ''
-                }
+    switch (pathname) {
+        case '/api/socket':
+            generalSocketServer.handleUpgrade(req, socket, head, (ws) => {
+                generalSocketServer.emit('connection', ws, req);
             });
-
-            return data
-                .split('\n')
-                .map((line: string) => {
-                    if (!line.startsWith('monitor_status'))
-                        return;
-
-                    const splitDetails = line
-                        .split(/\d$/g)[0]
-                        .replace('monitor_status', '')
-                        .split(',')
-                        .map((value: string, index) => {
-                            const [key, val] = value.split('=');
-
-                            if (index === 0)
-                                return `{ "monitor_name": ${val}`
-
-                            return `"${key}": ${val}`
-                        })
-                        .join(',')
-                    
-                    const details = JSON.parse(splitDetails);
-
-                    return {
-                        ...details,
-                        status: line.endsWith('1') ? 'up' : 'down'
-                    }
-                })
-                .filter((value: any) => value !== undefined);
-        }
+            break;
+        case '/api/status':
+            wsServerStatus.handleUpgrade(req, socket, head, (ws) => {
+                wsServerStatus.emit('connection', ws, req);
+            });
+        default:
+            socket.destroy();
     }
-}
-
-const WebSocket = require("ws");
-const wsServer = new WebSocket.Server({
-    server: expressServer,
-    path: '/api/status'
-    // noServer: true
-})  
-
-const getServiceStatus = async () => {
-    const response = await API.status.active();
-
-    //Strip out private information
-    const filtered = response.map((service: any) => {
-        if (service.monitor_type === 'http') {
-            return {
-                monitor_name: service.monitor_name,
-                status: service.status,
-                url: service.url,
-                type: service.monitor_type,
-            }
-        }
-
-        if (service.monitor_type === 'port') {
-            return {
-                monitor_name: service.monitor_name,
-                status: service.status,
-                port: service.hostname,
-                type: service.monitor_type,
-            }
-        }
-
-        if (service.monitor_type === 'ping') {
-            return {
-                monitor_name: service.monitor_name,
-                status: service.status,
-                type: service.monitor_type,
-            }
-        }
-
-        return service;
-    });
-
-    console.log(filtered)
-
-
-    wsServer.clients.forEach((client:any) => {
-        client.send(JSON.stringify(filtered));
-    })
-};
-
-setInterval(async () => {
-    getServiceStatus();
-}, 5000)
-
-wsServer.on("connection", function(ws: any) {    // what should a websocket do on connection
-    console.log("Someone has loaded my website");
-    getServiceStatus();
-    ws.on("message", function(msg: any) {        // what to do on message event
-        wsServer.clients.forEach(function each(client: any) {
-            if (client.readyState === WebSocket.OPEN) {     // check if client is ready
-                client.send(msg.toString());
-            }
-        });
-    });
-});
+})
