@@ -25,18 +25,17 @@ export const upsertDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc => 
         if (req.body?.tags) updateData["tags"] = req.body?.tags;
         if (Object.keys(updateData).length == 0) return res.status(400).send("Bad Request: Must include body");
     
-        mongoClient.connect(async () => {
-            const query = { _id: new ObjectId(req.params.id) };
-            const update = { $set: updateData }
-            const options = { upsert: true }
-            const collection = mongoClient.db(dbName).collection(draftCollectionName);
-            
-            const updateResponse = await collection.updateOne(query, update, options);
-            if (!updateResponse.acknowledged) return res.status(500).send('An error occured with inserting into the database');
-    
-            //if upsert return 201 else 204 no content
-            return res.status(204).send();
-        });
+        const connection = await mongoClient.connect();
+        const collection = connection.db(dbName).collection(draftCollectionName);
+        const query = { _id: new ObjectId(req.params.id) };
+        const update = { $set: updateData }
+        const options = { upsert: true }
+
+        const updateResponse = await collection.updateOne(query, update, options);
+        if (!updateResponse.acknowledged) return res.status(500).send('An error occured with inserting into the database');
+
+        //if upsert return 201 else 204 no content
+        return res.status(204).send();
     };
 };
 

@@ -9,22 +9,21 @@ const authDB = `auth`;
 //type loginReqType = { header: { authorization: string }, user: string }
 type loginReqType = any;
 type loginResType = TypedRequest.Response<{username: string, access_token: string} | string>;
-type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFunction) => void | Promise<void>;
+type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFunction) => void | Promise<loginResType>;
 
 //assumes that token is still valid
 export const refreshTokenRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
   return async (req: loginReqType, res: loginResType) => {
     const username = req.decryptJWT.username;
 
-    mongoClient.connect(async () => {
-      const collection = mongoClient.db(authDB).collection(authDB);
-      const dbUser = await collection.findOne({ username: username }) as userSchema;
+    const connection = await mongoClient.connect();
+    const collection = connection.db(authDB).collection(authDB);
+    const dbUser = await collection.findOne({ username: username }) as userSchema;
 
-      if (!dbUser) return res.status(404).send(`user not found`);
-      return res.status(200).send({
-        username: dbUser.username,
-        access_token: generateAccessToken({username: dbUser.username})
-      });
+    if (!dbUser) return res.status(404).send(`user not found`);
+    return res.status(200).send({
+      username: dbUser.username,
+      access_token: generateAccessToken({username: dbUser.username})
     });
   }
 }

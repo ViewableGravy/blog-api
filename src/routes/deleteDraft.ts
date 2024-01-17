@@ -12,16 +12,15 @@ type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFuncti
 export const deleteDraftRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
     return async (req: loginReqType, res: loginResType) : Promise<any> => {
         const id = req.params.id;
-        
-        mongoClient.connect(async () => {
-            const collection = mongoClient.db(dbName).collection(draftCollectionName);
-            const query = { _id: new ObjectId(id) }
-            const draft = await collection.deleteOne(query);
-    
-            if (draft.deletedCount === 0) return res.status(404).send('Could not find draft matching the provided ID');
-    
-            return res.status(204).send();
-        });
+
+        const connection = await mongoClient.connect();
+        const collection = connection.db(dbName).collection(draftCollectionName);
+        const query = { _id: new ObjectId(id) }
+        const draft = await collection.deleteOne(query);
+
+        if (draft.deletedCount === 0) return res.status(404).send('Could not find draft matching the provided ID');
+
+        return res.status(204).send();
     }
 };
 

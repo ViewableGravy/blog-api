@@ -42,14 +42,13 @@ export const insertParagraphRoute = (mongoClient: MongoClient): ExpressRouteFunc
 
         if (position) 
             update.$push.content.$position = position
-    
-        mongoClient.connect(async () => {                
-            const updateResponse = await collection.updateOne(queryDraft, update);
-            if (updateResponse.matchedCount == 0)
-                return res.status(404).send(`Draft with ID: ${id} could not be found`);
-    
-            return res.status(200).send({ contentID: contentID });
-        });
+
+        const connection = await mongoClient.connect();
+        const updateResponse = await collection.updateOne(queryDraft, update);
+        if (updateResponse.matchedCount == 0)
+            return res.status(404).send(`Draft with ID: ${id} could not be found`);
+
+        return res.status(200).send({ contentID: contentID });
     };
 };
 

@@ -131,27 +131,23 @@ export const upsertParagraphRoute = (mongoClient: MongoClient): ExpressRouteFunc
             css: css
         }
     
-        const update = GenerateCollectionUpsertQuery(collectionID, paragraphContent, position)
-    
-        mongoClient.connect(async () => {
-            // updating existing content with a new position
-            if (collectionID && position)
-                return await draftContentHelperFunctions.moveContent(mongoClient)(res, req, findQuery, ['css', 'text']);
-    
-            // upsert (no rearrange) / insert with position
-            const findResponse = await collection.findOne(findQuery);
-            if (!findResponse) { res.status(404).send(`Content with CollectionID ${collectionID} does not exist`); return };
-    
-            const update = draftContentHelperFunctions.GenerateCollectionUpsertQuery(collectionID, paragraphContent, position)
-            const updateResponse = await collection.updateOne(findQuery, update, { upsert: true });
-    
-            if (!updateResponse.acknowledged) return res.status(500).send('An error occured with inserting into the database');
-    
-            //No collection id, one was generated in the update object
-            !collectionID
-                ? res.status(200).send((update as any).$push.content.$each[0]._id)
-                : res.status(200).send(paragraphContent);
-        });
+        // updating existing content with a new position
+        if (collectionID && position)
+            return await draftContentHelperFunctions.moveContent(mongoClient)(res, req, findQuery, ['css', 'text']);
+
+        // upsert (no rearrange) / insert with position
+        const findResponse = await collection.findOne(findQuery);
+        if (!findResponse) { res.status(404).send(`Content with CollectionID ${collectionID} does not exist`); return };
+
+        const update = draftContentHelperFunctions.GenerateCollectionUpsertQuery(collectionID, paragraphContent, position)
+        const updateResponse = await collection.updateOne(findQuery, update, { upsert: true });
+
+        if (!updateResponse.acknowledged) return res.status(500).send('An error occured with inserting into the database');
+
+        //No collection id, one was generated in the update object
+        !collectionID
+            ? res.status(200).send((update as any).$push.content.$each[0]._id)
+            : res.status(200).send(paragraphContent);
     };
 };
 

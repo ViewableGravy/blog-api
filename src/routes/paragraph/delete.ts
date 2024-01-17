@@ -30,13 +30,12 @@ export const deleteContentRoute = (mongoClient: MongoClient): ExpressRouteFunc =
             }
         }
     
-        mongoClient.connect(async () => {
-            const status = await collection.updateOne(query, update);
-    
-            return status.matchedCount === 0
-                ? res.status(404).send("No content matching ID provided")
-                : res.status(204).send();
-        });
+        const connection = await mongoClient.connect();
+        const status = await collection.updateOne(query, update);
+
+        return status.matchedCount === 0
+            ? res.status(404).send("No content matching ID provided")
+            : res.status(204).send();
     };
 };
 

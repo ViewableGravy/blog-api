@@ -47,30 +47,29 @@ export const patchParagraphRoute = (mongoClient: MongoClient): ExpressRouteFunc 
             paragraphContent.css = css;
         if (text)
             paragraphContent.text = text;
-    
-        mongoClient.connect(async () => {       
-            const existingContent = await collection.findOne(queryContent);
-            if (!existingContent)
-                return res.status(404).send(`Draft with ID: ${id} and ContentID: ${contentID} could not be found`);
 
-            const update : any = {
-                $push: { 
-                    content: {
-                        $each: [{
-                            ...existingContent.content.find((x: { _id: ObjectId; }) => contentID.equals(x._id)),
-                            ...paragraphContent
-                        }],
-                    }
+        const connection = await mongoClient.connect();
+        const existingContent = await collection.findOne(queryContent);
+        if (!existingContent)
+            return res.status(404).send(`Draft with ID: ${id} and ContentID: ${contentID} could not be found`);
+
+        const update : any = {
+            $push: { 
+                content: {
+                    $each: [{
+                        ...existingContent.content.find((x: { _id: ObjectId; }) => contentID.equals(x._id)),
+                        ...paragraphContent
+                    }],
                 }
             }
+        }
 
-            const removeResponse = await collection.updateOne(queryDraft, remove);
-            const insertResponse = await collection.updateOne(queryDraft, update);
-            if (insertResponse.matchedCount == 0)
-                return res.status(404).send(`Draft with ID: ${id} could not be found`);
-    
-            return res.status(200).send({ contentID: contentID });
-        });
+        const removeResponse = await collection.updateOne(queryDraft, remove);
+        const insertResponse = await collection.updateOne(queryDraft, update);
+        if (insertResponse.matchedCount == 0)
+            return res.status(404).send(`Draft with ID: ${id} could not be found`);
+
+        return res.status(200).send({ contentID: contentID });
     };
 };
 

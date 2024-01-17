@@ -12,7 +12,7 @@ const authDB = `auth`;
 
 type loginReqType = TypedRequest.RequestBody<{email: string, password: string}>;
 type loginResType = TypedRequest.Response<{username: string, access_token: string} | string>;
-type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFunction) => void | Promise<void>;
+type ExpressRouteFunc = (req: loginReqType, res: loginResType, next?: NextFunction) => Promise<loginResType>;
 
 export const loginRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
   return async (req: loginReqType, res: loginResType) => {
@@ -24,17 +24,17 @@ export const loginRoute = (mongoClient: MongoClient): ExpressRouteFunc => {
       password: req.body?.password
     }
 
-    mongoClient.connect(async () => {
-      const collection = mongoClient.db(authDB).collection(authDB);
-      const dbUser = await collection.findOne({ email: getUser.email }) as userSchema;
+    const connection = await mongoClient.connect();
 
-      if (!dbUser) return res.status(401).send(`User not found`);
-      if (dbUser.password != getUser.password) return res.status(401).send(`Authentication Failed`);
-      
-      res.status(200).send({
-        username: dbUser.username,
-        access_token: generateAccessToken({username: dbUser.username})
-      });
+    const collection = connection.db(authDB).collection(authDB);
+    const dbUser = await collection.findOne({ email: getUser.email }) as userSchema;
+
+    if (!dbUser) return res.status(401).send(`User not found`);
+    if (dbUser.password != getUser.password) return res.status(401).send(`Authentication Failed`);
+
+    return res.status(200).send({
+      username: dbUser.username,
+      access_token: generateAccessToken({username: dbUser.username})
     });
   }
 }

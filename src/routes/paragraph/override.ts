@@ -47,18 +47,17 @@ export const putParagraphRoute = (mongoClient: MongoClient): ExpressRouteFunc =>
                 }
             }
         };
-    
-        mongoClient.connect(async () => {       
-            const removeResponse = await collection.updateOne(queryDraft, remove);
-            if (removeResponse.matchedCount == 0)
-                return res.status(404).send(`Draft with ID: ${id} could not be found`);
 
-            const insertResponse = await collection.updateOne(queryDraft, update);
-            if (insertResponse.matchedCount == 0)
-                return res.status(404).send(`Draft with ID: ${id} could not be found`);
-    
-            return res.status(200).send({ contentID: contentID });
-        });
+        const connection = await mongoClient.connect();
+        const removeResponse = await collection.updateOne(queryDraft, remove);
+        if (removeResponse.matchedCount == 0)
+            return res.status(404).send(`Draft with ID: ${id} could not be found`);
+
+        const insertResponse = await collection.updateOne(queryDraft, update);
+        if (insertResponse.matchedCount == 0)
+            return res.status(404).send(`Draft with ID: ${id} could not be found`);
+
+        return res.status(200).send({ contentID: contentID });
     };
 };
 
