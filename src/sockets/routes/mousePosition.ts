@@ -7,25 +7,33 @@ type TActivePointers = Array<RouteDataTypes.MousePosition['data'] & {
 }>
 
 const maxInactiveTime = 10000;
-const activePointers: TActivePointers = [];
+let activePointers: TActivePointers = [];
+let socket: Server<typeof WebSocket, typeof IncomingMessage> | null = null
 
-export const generateHandleMousePosition = (socket: Server<typeof WebSocket, typeof IncomingMessage>) => ({ data }: RouteDataTypes.MousePosition) => {
-    //update active Pointers or push new pointer
-    const index = activePointers.findIndex((pointer) => pointer.username === data.username);
-    if (index >= 0) {
-        activePointers[index] = {
-            ...data,
-            lastUpdated: Date.now()
-        };
-    } else {
-        activePointers.push({
-            ...data,
-            lastUpdated: Date.now()
-        });
-    }
-    
-    //send active pointers to all clients
-    socket.clients.forEach((client) => {
+export const generateHandleMousePosition = (_socket: Server<typeof WebSocket, typeof IncomingMessage>) => {
+    socket = _socket;
+    activePointers = [];
+
+    return ({ data }: RouteDataTypes.MousePosition) => {
+        //update active Pointers or push new pointer
+        const index = activePointers.findIndex((pointer) => pointer.username === data.username);
+        if (index >= 0) {
+            activePointers[index] = {
+                ...data,
+                lastUpdated: Date.now()
+            };
+        } else {
+            activePointers.push({
+                ...data,
+                lastUpdated: Date.now()
+            });
+        }
+    };
+};
+
+//send active pointers to all clients
+setInterval(() => {
+    socket?.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
                 event: ROUTE_IDENTIFIERS.MOUSE_POSITION,
@@ -33,7 +41,7 @@ export const generateHandleMousePosition = (socket: Server<typeof WebSocket, typ
             }));
         }
     });
-};
+}, 100);
 
 //remove stale pointers on an interval
 setInterval(() => {

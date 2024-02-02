@@ -8,7 +8,6 @@ export const generalSocketServer = new WebSocket.Server({
 
 generalSocketServer.on("connection", (ws) => {
     const handleMousePosition = generateHandleMousePosition(generalSocketServer);
-    console.log('connection')
 
     ws.on("message", (msg) => {
         try {
@@ -23,6 +22,7 @@ generalSocketServer.on("connection", (ws) => {
             if (!dataValidated)
                 return log(DEBUG_LEVELS.ERROR, `Invalid data: ${msg}`);
 
+            // essentially a router
             switch (dataValidated.event) {
                 case ROUTE_IDENTIFIERS.MOUSE_POSITION:
                     handleMousePosition(dataValidated);
@@ -32,7 +32,5 @@ generalSocketServer.on("connection", (ws) => {
             log(DEBUG_LEVELS.ERROR, error);
         }
     })
-
-    ws.send('hi')
 
 });
