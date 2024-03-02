@@ -98,7 +98,7 @@ const getServiceStatus = async () => {
     })
 };
 
-if (process.env.ACTIVE_KUMA_STATUS === 'inactive') {
+if (process.env.ACTIVE_KUMA_STATUS !== 'inactive') {
     setInterval(async () => {
         getServiceStatus();
     }, 5000)
