@@ -2,9 +2,6 @@
 import axios from "axios";
 import WebSocket from "ws";
 
-/***** CUSTOM IMPORTS *****/
-import { expressServer } from "../app";
-
 /***** CONSTANTS *****/
 const KUMA_KEY = process.env.KUMA_KEY;
 
@@ -20,7 +17,7 @@ const API = {
 
             //do some translation here before returning
             const { data } = await axios.get('https://kuma.gravy.cc/metrics', authOptions).catch((err) => {
-                console.log(err)
+                console.log(err);
                 return {
                     data: ''
                 }
