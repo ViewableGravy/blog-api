@@ -56,6 +56,10 @@ const API = {
 }
 
 /***** SERVER *****/
+export const wsServerStatus = new WebSocket.Server({
+    noServer: true
+})  
+
 const getServiceStatus = async () => {
     const response = await API.status.active();
 
@@ -90,10 +94,8 @@ const getServiceStatus = async () => {
         return service;
     });
 
-    console.log(filtered)
-
-
-    wsServerStatus.clients.forEach((client:any) => {
+    console.log('sending statuses: ', wsServerStatus.clients.size)
+    wsServerStatus.clients.forEach((client) => {
         client.send(JSON.stringify(filtered));
     })
 };
@@ -103,10 +105,6 @@ if (process.env.ACTIVE_KUMA_STATUS !== 'inactive') {
         getServiceStatus();
     }, 5000)
 }
-
-export const wsServerStatus = new WebSocket.Server({
-    noServer: true
-})  
 
 wsServerStatus.on("connection", function(ws: any) {    // what should a websocket do on connection
     console.log("Someone has loaded my website");
