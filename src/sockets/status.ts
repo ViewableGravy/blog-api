@@ -106,14 +106,16 @@ if (process.env.ACTIVE_KUMA_STATUS !== 'inactive') {
     }, 5000)
 }
 
-wsServerStatus.on("connection", function(ws: any) {    // what should a websocket do on connection
-    console.log("Someone has loaded my website");
-    getServiceStatus();
-    ws.on("message", function(msg: any) {        // what to do on message event
-        wsServerStatus.clients.forEach(function each(client: any) {
-            if (client.readyState === WebSocket.OPEN) {     // check if client is ready
-                client.send(msg.toString());
-            }
-        });
+wsServerStatus.on("connection", (ws) => {    // what should a websocket do on connection
+    ws.on("error", (err) => {
+        console.log('error: ', err);
+    })
+
+    ws.on("close", (e) => {
+        console.log('closed: ', e);
+    })
+
+    ws.on("unexpected-response", (e) => {
+        console.log('unexpected-response: ', e);
     });
 });
