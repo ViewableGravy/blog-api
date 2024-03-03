@@ -1,17 +1,23 @@
-import { DEBUG_LEVELS, ROUTE_IDENTIFIERS, log, validateData, validateMessage } from "./helpers";
-import { generateHandleMousePosition } from "./routes/mousePosition";
-import { generateHandleServiceStatus } from "./routes/status";
-import { createMe } from "./global";
+/***** BASE IMPORTS *****/
 import { WebSocket } from "ws";
-import { generateHandleUnsubscribe } from "./routes/unsubscribe";
 
+/***** UTILITIES *****/
+import { DEBUG_LEVELS, ROUTE_IDENTIFIERS, log, validateData, validateMessage } from "./helpers";
+import { createMe } from "./global";
+
+/***** ROUTE HANDLERS *****/
+import { generateHandleMousePosition } from "./routes/mousePosition";
+import { generateHandleUnsubscribe } from "./routes/unsubscribe";
+import { handleServiceStatus } from "./routes/status";
+
+/***** SERVER START *****/
 export const generalSocketServer = new WebSocket.Server({
     noServer: true,
     clientTracking: true,
 });
 
+/***** SERVER LISTENERS *****/
 const handleMousePosition = generateHandleMousePosition();
-const handleServiceStatus = generateHandleServiceStatus(generalSocketServer);
 
 generalSocketServer.on("connection", (ws) => {
     const me = createMe({ 
@@ -20,6 +26,7 @@ generalSocketServer.on("connection", (ws) => {
         rooms: new Set<string>(),
     });
 
+    /***** LOCALIZED SERVER LISTENERS *****/
     const handleUnsubscribe = generateHandleUnsubscribe(me);
 
     ws.on("message", (msg) => {

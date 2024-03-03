@@ -1,3 +1,4 @@
+/***** BASE IMPORTS *****/
 import { WebSocket } from "ws";
 
 /***** TYPE DEFINITIONS *****/
@@ -22,7 +23,7 @@ setInterval(() => {
     console.log('clientIdentifiers: ', clients.map(({ ws, ...rest }) => rest));
 }, 10000);
 
-/***** Helper Functions *****/
+/***** HELPER FUNCTIONS *****/
 export const createMe = (props: TClient) => {
     clients.push(props);
 

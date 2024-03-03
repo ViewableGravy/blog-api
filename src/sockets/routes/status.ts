@@ -1,13 +1,14 @@
 /***** BASE IMPORTS *****/
 import axios from "axios";
-import { type IncomingMessage } from "http";
 import WebSocket, { type Server } from "ws";
+import { type IncomingMessage } from "http";
+
+/***** CONSTS *****/
 import { ROUTE_IDENTIFIERS } from "../helpers";
+import { clients, getClientsInRoom } from "../global";
 
 /***** CONSTANTS *****/
 const KUMA_KEY = process.env.KUMA_KEY;
-
-let socket: Server<typeof WebSocket, typeof IncomingMessage> | null = null
 
 /***** API *****/
 const API = {
@@ -58,15 +59,6 @@ const API = {
     }
 }
 
-/***** SERVER *****/
-export const generateHandleServiceStatus = (_socket: Server<typeof WebSocket, typeof IncomingMessage>) => {
-    socket = _socket;
-
-    return (data: unknown) => {
-        // console.log('data: ', data);
-    }
-}
-
 const getServiceStatus = async () => {
     const response = await API.status.active();
 
@@ -101,12 +93,14 @@ const getServiceStatus = async () => {
         return service;
     });
 
-    socket?.clients.forEach((client) => {
-        client.send(JSON.stringify({
-            event: ROUTE_IDENTIFIERS.SERVICE_STATUS,
-            data: filtered
-        }));
-    })
+    getClientsInRoom(ROUTE_IDENTIFIERS.SERVICE_STATUS).forEach((client) => {
+        if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify({
+                event: ROUTE_IDENTIFIERS.SERVICE_STATUS,
+                data: filtered
+            }));
+        }
+    });
 };
 
 /***** Intervals *****/
@@ -115,3 +109,6 @@ if (process.env.ACTIVE_KUMA_STATUS !== 'inactive') {
         getServiceStatus();
     }, 5000)
 }
+
+/***** SERVER *****/
+export const handleServiceStatus = (data: unknown) => {}

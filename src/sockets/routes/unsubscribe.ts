@@ -1,9 +1,12 @@
-import { TClient, removeClientFromRoom } from "../global";
+/***** CONSTS *****/
 import { ROUTE_IDENTIFIERS } from "../helpers";
-import { RouteDataTypes } from "../types";
+import { type RouteDataTypes } from "../types";
+import { TClient, removeClientFromRoom } from "../global";
 
+/***** TYPE DEFINITIONS *****/
 type TGenerateHandleUnsubscribe = (me: TClient) => (data: RouteDataTypes.Unsubscribe) => void;
 
+/***** COMPONENT START *****/
 export const generateHandleUnsubscribe: TGenerateHandleUnsubscribe = ({ identifier }) => ({ data: rooms }) => {
     rooms.forEach((room) => {
         removeClientFromRoom(room, identifier);

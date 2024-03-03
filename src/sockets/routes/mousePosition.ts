@@ -1,9 +1,14 @@
-import { Server, WebSocket } from "ws";
-import { ROUTE_IDENTIFIERS } from "../helpers";
-import { IncomingMessage } from "http";
-import { type RouteDataTypes } from "../types";
-import { clients, getClientsInRoom } from "../global";
+/***** BASE IMPORTS *****/
+import { WebSocket } from "ws";
 
+/***** UTILITIES *****/
+import { ROUTE_IDENTIFIERS } from "../helpers";
+
+/***** CONSTS *****/
+import { getClientsInRoom } from "../global";
+import { type RouteDataTypes } from "../types";
+
+/***** TYPE DEFINITIONS *****/
 type TActivePointers = Array<RouteDataTypes.MousePosition['data'] & {
     lastUpdated: number
 }>
@@ -11,6 +16,7 @@ type TActivePointers = Array<RouteDataTypes.MousePosition['data'] & {
 const maxInactiveTime = 10000;
 let activePointers: TActivePointers = [];
 
+/***** GENERATOR START *****/
 export const generateHandleMousePosition = () => {
     activePointers = [];
 
@@ -31,6 +37,7 @@ export const generateHandleMousePosition = () => {
     };
 };
 
+/***** INTERVALS *****/
 //send active pointers to all clients
 setInterval(() => {
     getClientsInRoom(ROUTE_IDENTIFIERS.MOUSE_POSITION).forEach(({ ws }) => {
