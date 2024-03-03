@@ -26,7 +26,8 @@
     "sanitize": "^2.1.2",
     "socket.io": "^4.7.4",
     "socketio": "^1.0.0",
-    "spotify-connect-ws": "^0.1.1"
+    "spotify-connect-ws": "^0.1.1",
+    "zod": "^3.22.4"
   },
   "type": "commonjs",
   "devDependencies": {

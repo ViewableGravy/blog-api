@@ -1,9 +1,13 @@
 /***** BASE IMPORTS *****/
 import axios from "axios";
-import WebSocket from "ws";
+import { type IncomingMessage } from "http";
+import WebSocket, { type Server } from "ws";
+import { ROUTE_IDENTIFIERS } from "../helpers";
 
 /***** CONSTANTS *****/
 const KUMA_KEY = process.env.KUMA_KEY;
+
+let socket: Server<typeof WebSocket, typeof IncomingMessage> | null = null
 
 /***** API *****/
 const API = {
@@ -17,7 +21,6 @@ const API = {
 
             //do some translation here before returning
             const { data } = await axios.get('https://kuma.gravy.cc/metrics', authOptions).catch((err) => {
-                console.log(err);
                 return {
                     data: ''
                 }
@@ -56,9 +59,13 @@ const API = {
 }
 
 /***** SERVER *****/
-export const wsServerStatus = new WebSocket.Server({
-    noServer: true
-})  
+export const generateHandleServiceStatus = (_socket: Server<typeof WebSocket, typeof IncomingMessage>) => {
+    socket = _socket;
+
+    return (data: unknown) => {
+        // console.log('data: ', data);
+    }
+}
 
 const getServiceStatus = async () => {
     const response = await API.status.active();
@@ -94,28 +101,17 @@ const getServiceStatus = async () => {
         return service;
     });
 
-    console.log('sending statuses: ', wsServerStatus.clients.size)
-    wsServerStatus.clients.forEach((client) => {
-        client.send(JSON.stringify(filtered));
+    socket?.clients.forEach((client) => {
+        client.send(JSON.stringify({
+            event: ROUTE_IDENTIFIERS.SERVICE_STATUS,
+            data: filtered
+        }));
     })
 };
 
+/***** Intervals *****/
 if (process.env.ACTIVE_KUMA_STATUS !== 'inactive') {
     setInterval(async () => {
         getServiceStatus();
     }, 5000)
 }
-
-wsServerStatus.on("connection", (ws) => {    // what should a websocket do on connection
-    ws.on("error", (err) => {
-        console.log('error: ', err);
-    })
-
-    ws.on("close", (e) => {
-        console.log('closed: ', e);
-    })
-
-    ws.on("unexpected-response", (e) => {
-        console.log('unexpected-response: ', e);
-    });
-});

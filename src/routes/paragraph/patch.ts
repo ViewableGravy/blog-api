@@ -30,7 +30,6 @@ export const patchParagraphRoute = (mongoClient: MongoClient): ExpressRouteFunc 
                 } 
             }
         }
-        console.log(queryDraft)
         const collection = mongoClient.db(dbName).collection(draftCollectionName);
         const remove : any = {
             $pull: {

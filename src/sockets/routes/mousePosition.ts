@@ -1,6 +1,8 @@
 import { Server, WebSocket } from "ws";
-import { ROUTE_IDENTIFIERS, RouteDataTypes } from "../helpers";
+import { ROUTE_IDENTIFIERS } from "../helpers";
 import { IncomingMessage } from "http";
+import { type RouteDataTypes } from "../types";
+import { clients, getClientsInRoom } from "../global";
 
 type TActivePointers = Array<RouteDataTypes.MousePosition['data'] & {
     lastUpdated: number
@@ -8,10 +10,8 @@ type TActivePointers = Array<RouteDataTypes.MousePosition['data'] & {
 
 const maxInactiveTime = 10000;
 let activePointers: TActivePointers = [];
-let socket: Server<typeof WebSocket, typeof IncomingMessage> | null = null
 
-export const generateHandleMousePosition = (_socket: Server<typeof WebSocket, typeof IncomingMessage>) => {
-    socket = _socket;
+export const generateHandleMousePosition = () => {
     activePointers = [];
 
     return ({ data }: RouteDataTypes.MousePosition) => {
@@ -33,9 +33,9 @@ export const generateHandleMousePosition = (_socket: Server<typeof WebSocket, ty
 
 //send active pointers to all clients
 setInterval(() => {
-    socket?.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
+    getClientsInRoom(ROUTE_IDENTIFIERS.MOUSE_POSITION).forEach(({ ws }) => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
                 event: ROUTE_IDENTIFIERS.MOUSE_POSITION,
                 data: activePointers
             }));

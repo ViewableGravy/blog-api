@@ -18,10 +18,8 @@ import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { CommentRoute, CommentRouteValidator } from './routes/contact';
-import axios from 'axios';
 import { parse } from 'url';
 import { generalSocketServer } from './sockets';
-import { wsServerStatus } from './sockets/status';
 
 const server = `192.168.20.20:27017`;
 const dbName = `blog`;
@@ -145,10 +143,6 @@ expressServer.on('upgrade', (req, socket, head) => {
                 generalSocketServer.emit('connection', ws, req);
             });
             break;
-        case '/api/status':
-            wsServerStatus.handleUpgrade(req, socket, head, (ws) => {
-                wsServerStatus.emit('connection', ws, req);
-            });
         default:
             socket.destroy();
     }
